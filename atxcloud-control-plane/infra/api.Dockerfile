@@ -9,4 +9,4 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/apps/api/node_modules ./node_modules
 COPY --from=build /app/apps/api/dist ./dist
-CMD ["node","dist/index.js"]
+CMD ["node","--experimental-specifier-resolution=node","dist/index.js"]
