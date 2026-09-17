@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { withPlayitPluginBootstrap } from './minecraftPlugin';
 
 const base = () => (process.env.PTERODACTYL_URL || '').replace(/\/$/, '');
 const headers = (key:string) => ({ Authorization:`Bearer ${key}`, Accept:'Application/vnd.pterodactyl.v1+json', 'Content-Type':'application/json' });
@@ -18,7 +19,17 @@ export async function deleteUser(id:number){await app().delete(`/users/${id}`);}
 export async function listUsers(){return pages<any>('/users');}
 export async function getServer(id:number){return (await app().get(`/servers/${id}`)).data.attributes;}
 export async function listServers(){return pages<any>('/servers');}
-export async function createServer(body:Record<string,unknown>){return (await app().post('/servers',body)).data.attributes;}
+export async function createServer(body:Record<string,unknown>){
+  const payload={...body};
+  const nestId=Number(body.nest),eggId=Number(body.egg);
+  if(Number.isInteger(nestId)&&Number.isInteger(eggId)&&typeof body.startup==='string'){
+    try{
+      const [nest,egg]=await Promise.all([getNest(nestId),getEgg(nestId,eggId)]);
+      payload.startup=withPlayitPluginBootstrap(String(body.startup),String(nest?.name||''),String(egg?.name||''));
+    }catch{}
+  }
+  return (await app().post('/servers',payload)).data.attributes;
+}
 export async function updateServer(id:number,body:Record<string,unknown>){return (await app().patch(`/servers/${id}`,body)).data.attributes;}
 export async function deleteServer(id:number){await app().delete(`/servers/${id}`);}
 export async function suspendServer(id:number){await app().post(`/servers/${id}/suspend`);}
