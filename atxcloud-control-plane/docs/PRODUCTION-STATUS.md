@@ -13,11 +13,11 @@ This file tracks the actual control-plane implementation. A feature is complete 
 - Reconciliation worker for Pterodactyl/local server drift
 - Staff destructive-operation API boundaries
 - File, console, startup and backup API adapters
-- Cloudflare Tunnel-compatible web binding on 127.0.0.1:4832
-- User-controlled Minecraft Playit plugin bootstrap for compatible Bukkit/Paper-family servers
+- Cloudflare Tunnel-compatible web binding
+- User-controlled Minecraft Playit plugin provisioning for compatible Bukkit/Paper-family servers
 
 ## Playit policy
-AtxCloud does **not** create, claim, authenticate, configure, or manage a Playit account or tunnel. For compatible Minecraft software, server creation adds a one-time startup bootstrap that downloads the Playit Minecraft plugin into `/plugins/playit-minecraft-plugin.jar`. The server owner completes Playit setup themselves. The bootstrap is disabled for non-Minecraft and non-plugin-capable software.
+AtxCloud does **not** create, claim, authenticate, configure, or manage a Playit account or tunnel. For compatible Minecraft software, server creation now creates `/plugins` when needed and uses Pterodactyl's remote-file pull API to place the configured Playit Minecraft plugin directly at `/plugins/playit-minecraft-plugin.jar`. The server owner completes Playit setup themselves. Non-Minecraft and non-plugin-capable software is not modified. If plugin provisioning fails, the newly-created Pterodactyl server is rolled back instead of returning a false-success server record.
 
 ## Still required before the project can be called launch-ready
 - Complete dashboard information architecture and all requested pages
