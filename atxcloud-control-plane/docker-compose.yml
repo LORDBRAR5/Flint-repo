@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: atxcloud
+      POSTGRES_USER: atxcloud
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - atxcloud-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U atxcloud -d atxcloud"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  api:
+    build: {context: ., dockerfile: infra/api.Dockerfile}
+    restart: unless-stopped
+    env_file: .env
+    depends_on: {db: {condition: service_healthy}}
+    ports: ["127.0.0.1:4000:4000"]
+  bot:
+    build: {context: ., dockerfile: infra/bot.Dockerfile}
+    restart: unless-stopped
+    env_file: .env
+    depends_on: {api: {condition: service_started}}
+  web:
+    build: {context: ., dockerfile: infra/web.Dockerfile}
+    restart: unless-stopped
+    env_file: .env
+    depends_on: {api: {condition: service_started}}
+    ports: ["127.0.0.1:4832:3000"]
+volumes:
+  atxcloud-db:
