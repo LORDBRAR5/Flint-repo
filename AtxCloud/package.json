@@ -1,1 +1,17 @@
-{"name":"atxcloud","private":true,"workspaces":["apps/*"],"scripts":{"build":"npm run build:api && npm run build:web && npm run build:bot","build:api":"npm --workspace @atxcloud/api run build","build:web":"npm --workspace @atxcloud/web run build","build:bot":"npm --workspace @atxcloud/bot run build","start":"npm run start:api & npm run start:web & npm run start:bot","start:api":"npm --workspace @atxcloud/api run start","start:web":"npm --workspace @atxcloud/web run start","start:bot":"npm --workspace @atxcloud/bot run start"},"engines":{"node":">=22"},"dependencies":{"concurrently":"^9.2.1"},"devDependencies":{"typescript":"^5.9.2"}}
+{
+  "name": "atxcloud-platform",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "build": "npm run build:api && npm run build:bot && npm run build:web",
+    "build:api": "npm --workspace @atxcloud/api run build",
+    "build:bot": "npm --workspace @atxcloud/bot run build",
+    "build:web": "npm --workspace @atxcloud/web run build",
+    "start": "concurrently \"npm run start:api\" \"npm run start:bot\" \"npm run start:web\"",
+    "start:api": "npm --workspace @atxcloud/api run start",
+    "start:bot": "npm --workspace @atxcloud/bot run start",
+    "start:web": "npm --workspace @atxcloud/web run start"
+  },
+  "engines": {"node": ">=22 <23"},
+  "devDependencies": {"concurrently": "^9.2.1"}
+}
