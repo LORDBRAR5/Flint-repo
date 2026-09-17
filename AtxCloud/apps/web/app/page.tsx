@@ -1,0 +1,4 @@
+'use client';
+import {useEffect,useState} from 'react';
+async function api(path:string){const r=await fetch(`${process.env.NEXT_PUBLIC_API_URL||''}${path}`,{credentials:'include'});if(!r.ok)throw new Error('not_authenticated');return r.json()}
+export default function Home(){const[d,setD]=useState<any>();useEffect(()=>{api('/me').then(setD).catch(()=>{})},[]);if(!d)return <main className="login"><section className="card login-card"><div className="login-logo">Atx<span>Cloud</span></div><p className="muted">Secure hosting control plane</p><a className="oauth" href="/auth/discord">Continue with Discord</a></section></main>;return <main className="main"><div className="hero"><div><div className="eyebrow">AtxCloud</div><h1 className="title">Control your hosting.</h1><p className="muted">Accounts, servers and the ATX economy in one place.</p></div><a className="btn primary" href="/dashboard">Open dashboard</a></div></main>}
