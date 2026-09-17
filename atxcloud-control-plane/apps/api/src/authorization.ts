@@ -1,6 +1,6 @@
 import { query } from './db';
 
-export type Actor = { id:number; discord_id:string; blacklisted:boolean };
+export type Actor = { id:string; discord_id:string; blacklisted:boolean };
 
 export async function canManageServer(actor: Actor, publicId: string) {
   if (actor.blacklisted) return false;
