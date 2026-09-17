@@ -1,0 +1,3 @@
+/** @type {import('next').NextConfig} */
+const nextConfig={async rewrites(){const api=process.env.API_URL||'http://api:4000';return [{source:'/auth/:path*',destination:`${api}/auth/:path*`},{source:'/me',destination:`${api}/me`},{source:'/servers',destination:`${api}/servers`},{source:'/servers/:path*',destination:`${api}/servers/:path*`},{source:'/coins/:path*',destination:`${api}/coins/:path*`},{source:'/account/:path*',destination:`${api}/account/:path*`},{source:'/staff/:path*',destination:`${api}/staff/:path*`}]} };
+module.exports=nextConfig;
