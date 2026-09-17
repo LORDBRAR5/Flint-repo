@@ -14,11 +14,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: atxcloud-control-plane/package-lock.json
       - name: Install dependencies
         working-directory: atxcloud-control-plane
-        run: npm ci
+        run: npm install
       - name: Build API
         working-directory: atxcloud-control-plane
         run: npm run build:api
@@ -28,7 +26,7 @@ jobs:
       - name: Build dashboard
         working-directory: atxcloud-control-plane
         run: npm run build:web
-      - name: Validate schema SQL syntax with PostgreSQL
+      - name: Validate schema SQL
         working-directory: atxcloud-control-plane
         run: |
           docker run --rm -i postgres:17-alpine psql -v ON_ERROR_STOP=1 -U postgres -d postgres < prisma/schema.sql >/dev/null
