@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function Login(){return <main className="login"><section className="card login-card"><div className="login-logo">Atx<span>Cloud</span></div><p className="muted">Secure hosting control plane for your servers, resources and account.</p><Link className="oauth" href={`${process.env.NEXT_PUBLIC_API_URL||'http://127.0.0.1:4000'}/auth/discord`}>Continue with Discord</Link></section></main>}
