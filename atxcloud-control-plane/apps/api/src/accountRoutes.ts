@@ -1,5 +1,17 @@
 import { FastifyInstance } from 'fastify';
 import { query } from './db';
+import * as ptero from './ptero';
+import { password } from './security';
+
+async function dm(discordId:string,content:string){
+  const token=process.env.DISCORD_BOT_TOKEN;if(!token)throw new Error('bot_not_configured');
+  const headers={Authorization:`Bot ${token}`,'content-type':'application/json'};
+  const ch=await fetch('https://discord.com/api/users/@me/channels',{method:'POST',headers,body:JSON.stringify({recipient_id:discordId})});
+  if(!ch.ok)throw new Error('discord_dm_channel_failed');
+  const c:any=await ch.json();
+  const msg=await fetch(`https://discord.com/api/channels/${c.id}/messages`,{method:'POST',headers,body:JSON.stringify({content})});
+  if(!msg.ok)throw new Error('discord_dm_failed');
+}
 
 export async function registerAccountRoutes(app:FastifyInstance,auth:(req:any,res:any)=>Promise<any>){
   app.get('/account',async(req,res)=>{
@@ -9,6 +21,16 @@ export async function registerAccountRoutes(app:FastifyInstance,auth:(req:any,re
       query<any>('SELECT amount,type,reference,created_at FROM coin_ledger WHERE user_id=$1 ORDER BY created_at DESC LIMIT 100',[u.id])
     ]);
     return {user:{id:u.id,discordId:u.discord_id,username:u.username,email:u.email,coins:u.coins,createdAt:u.created_at,blacklisted:u.blacklisted},coinSummary:summary.rows[0],ledger:ledger.rows};
+  });
+  app.post('/account/reset-password',async(req,res)=>{
+    const u=await auth(req,res); if(!u)return res.code(401).send({error:'unauthorized'});
+    if(!u.ptero_user_id)return res.code(409).send({error:'pterodactyl_account_missing'});
+    const next=password();
+    try{
+      await ptero.updateUser(Number(u.ptero_user_id),{password:next});
+      await dm(u.discord_id,`Your AtxCloud panel password has been reset.\n\nUsername: ${u.username}\nPassword: ${next}\n\nKeep this message private.`);
+      return {ok:true};
+    }catch(e:any){return res.code(502).send({error:e.message||'password_reset_failed'});}
   });
   app.get('/coins/ledger',async(req,res)=>{
     const u=await auth(req,res); if(!u)return res.code(401).send({error:'unauthorized'});
