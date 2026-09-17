@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS users_blacklisted_idx ON users(blacklisted);
 
 CREATE TABLE IF NOT EXISTS sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -26,8 +27,8 @@ CREATE TABLE IF NOT EXISTS nodes (
   ptero_node_id integer NOT NULL UNIQUE,
   name text NOT NULL,
   enabled boolean NOT NULL DEFAULT true,
-  minecraft_slot_total integer NOT NULL DEFAULT 0,
-  code_slot_total integer NOT NULL DEFAULT 0,
+  minecraft_slot_total integer NOT NULL DEFAULT 0 CHECK(minecraft_slot_total >= 0),
+  code_slot_total integer NOT NULL DEFAULT 0 CHECK(code_slot_total >= 0),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -40,6 +41,7 @@ CREATE TABLE IF NOT EXISTS node_policies (
   enabled boolean NOT NULL DEFAULT true,
   UNIQUE(node_id,nest_id,egg_id)
 );
+CREATE INDEX IF NOT EXISTS node_policies_node_idx ON node_policies(node_id,enabled);
 
 CREATE TABLE IF NOT EXISTS servers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS servers (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS servers_owner_idx ON servers(owner_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS servers_node_idx ON servers(node_id) WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS server_access (
   server_id uuid NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
@@ -110,6 +113,23 @@ CREATE TABLE IF NOT EXISTS operation_keys (
   result jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS operation_jobs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  idempotency_key text NOT NULL UNIQUE,
+  type text NOT NULL,
+  actor_user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+  target_type text NOT NULL,
+  target_id text NOT NULL,
+  status text NOT NULL DEFAULT 'queued' CHECK(status IN ('queued','running','succeeded','failed')),
+  attempts integer NOT NULL DEFAULT 0,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  result jsonb,
+  error text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS operation_jobs_status_idx ON operation_jobs(status,created_at);
 
 CREATE TABLE IF NOT EXISTS settings (
   key text PRIMARY KEY,
