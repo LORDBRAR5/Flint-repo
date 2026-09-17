@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
-import { withPlayitPluginBootstrap } from './minecraftPlugin';
+import { isPluginCapableMinecraftSoftware, playitPolicy } from './minecraftPlugin';
 
-const base = () => (process.env.PTERODACTYL_URL || '').replace(/\/$/, '');
+const base = () => (process.env.PTERODACTYL_URL || '').replace(/\/$/,'');
 const headers = (key:string) => ({ Authorization:`Bearer ${key}`, Accept:'Application/vnd.pterodactyl.v1+json', 'Content-Type':'application/json' });
 function app():AxiosInstance { return axios.create({baseURL:`${base()}/api/application`,timeout:20000,headers:headers(process.env.PTERODACTYL_APPLICATION_KEY || '')}); }
 function client(key:string):AxiosInstance { return axios.create({baseURL:`${base()}/api/client`,timeout:20000,headers:headers(key)}); }
@@ -19,16 +19,34 @@ export async function deleteUser(id:number){await app().delete(`/users/${id}`);}
 export async function listUsers(){return pages<any>('/users');}
 export async function getServer(id:number){return (await app().get(`/servers/${id}`)).data.attributes;}
 export async function listServers(){return pages<any>('/servers');}
+
+async function bootstrapMinecraftPlugin(identifier:string,category:string,software:string){
+  const key=process.env.PTERODACTYL_CLIENT_KEY||'';
+  const policy=playitPolicy();
+  if(!key || !policy.enabled || !isPluginCapableMinecraftSoftware(category,software)) return {installed:false,reason:'not_applicable'};
+  await createFolder(identifier,key,'/','plugins').catch(()=>undefined);
+  await pullRemoteFile(identifier,key,policy.url,'/plugins',policy.filename);
+  return {installed:true,filename:policy.filename};
+}
+
 export async function createServer(body:Record<string,unknown>){
   const payload={...body};
   const nestId=Number(body.nest),eggId=Number(body.egg);
-  if(Number.isInteger(nestId)&&Number.isInteger(eggId)&&typeof body.startup==='string'){
+  let software='';
+  if(Number.isInteger(nestId)&&Number.isInteger(eggId)){
     try{
-      const [nest,egg]=await Promise.all([getNest(nestId),getEgg(nestId,eggId)]);
-      payload.startup=withPlayitPluginBootstrap(String(body.startup),String(nest?.name||''),String(egg?.name||''));
+      const egg=await getEgg(nestId,eggId);
+      software=String(egg?.name||'');
     }catch{}
   }
-  return (await app().post('/servers',payload)).data.attributes;
+  const created=(await app().post('/servers',payload)).data.attributes;
+  try{
+    await bootstrapMinecraftPlugin(String(created.identifier),String(body.category||'minecraft'),software);
+  }catch(error){
+    try{await app().delete(`/servers/${created.id}`);}catch{}
+    throw error;
+  }
+  return created;
 }
 export async function updateServer(id:number,body:Record<string,unknown>){return (await app().patch(`/servers/${id}`,body)).data.attributes;}
 export async function deleteServer(id:number){await app().delete(`/servers/${id}`);}
@@ -55,6 +73,7 @@ export async function writeFile(identifier:string,key:string,file:string,content
 export async function deleteFiles(identifier:string,key:string,root:string,files:string[]){await client(key).post(`/servers/${identifier}/files/delete`,{root,files});}
 export async function createFolder(identifier:string,key:string,root:string,name:string){await client(key).post(`/servers/${identifier}/files/create-folder`,{root,name});}
 export async function renameFiles(identifier:string,key:string,root:string,files:{from:string;to:string}[]){await client(key).put(`/servers/${identifier}/files/rename`,{root,files});}
+export async function pullRemoteFile(identifier:string,key:string,url:string,directory:string,filename?:string){await client(key).post(`/servers/${identifier}/files/pull`,{url,directory,filename});}
 export async function listBackups(identifier:string,key:string){return (await client(key).get(`/servers/${identifier}/backups`)).data.data.map((x:any)=>x.attributes);}
 export async function createBackup(identifier:string,key:string,name?:string){return (await client(key).post(`/servers/${identifier}/backups`,name?{name}:{})).data.attributes;}
 export async function deleteBackup(identifier:string,key:string,backupId:string){await client(key).delete(`/servers/${identifier}/backups/${backupId}`);}
