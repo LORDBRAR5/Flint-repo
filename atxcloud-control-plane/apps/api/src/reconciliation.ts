@@ -1,0 +1,20 @@
+import { query } from './db';
+import * as ptero from './ptero';
+
+let running=false;
+export async function reconcile(){
+  if(running)return;
+  running=true;
+  try{
+    const remote=await ptero.listPteroServers();
+    const local=await query<any>('SELECT id,ptero_server_id,public_id,suspended,deleted_at FROM servers');
+    const byId=new Map(remote.map((s:any)=>[Number(s.id),s]));
+    for(const s of local.rows){
+      const r=byId.get(Number(s.ptero_server_id));
+      if(!r && !s.deleted_at) await query('UPDATE servers SET suspended=true,updated_at=now() WHERE id=$1',[s.id]);
+      if(r && !s.deleted_at && Boolean(r.suspended)!==Boolean(s.suspended)) await query('UPDATE servers SET suspended=$1,updated_at=now() WHERE id=$1',[Boolean(r.suspended),s.id]);
+    }
+    await query("UPDATE operation_jobs SET status='failed',error='stale operation timeout',updated_at=now() WHERE status IN ('queued','running') AND created_at < now()-interval '30 minutes'");
+  }catch(e){console.error('reconciliation failed',e)}finally{running=false}
+}
+export function startReconciliation(){const ms=Math.max(30000,Number(process.env.RECONCILE_INTERVAL_MS||120000));setInterval(()=>void reconcile(),ms);void reconcile();}
